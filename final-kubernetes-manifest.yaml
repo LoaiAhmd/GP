@@ -1,0 +1,781 @@
+# =====================================================================
+# 1. Namespaces
+# =====================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: core-app
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: security-monitoring
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: deception-workspace
+---
+
+# =====================================================================
+# 2. CORE-APP NAMESPACE: Databases
+# =====================================================================
+
+# A. Order DB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-db
+  namespace: core-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-db
+  template:
+    metadata:
+      labels:
+        app: order-db
+    spec:
+      containers:
+      - name: order-db
+        image: postgres:15
+        env:
+        - name: POSTGRES_DB
+          value: orderdb
+        - name: POSTGRES_USER
+          value: user
+        - name: POSTGRES_PASSWORD
+          value: password
+        ports:
+        - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-db
+  namespace: core-app
+spec:
+  selector:
+    app: order-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+
+# B. Staff DB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: staff-db
+  namespace: core-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: staff-db
+  template:
+    metadata:
+      labels:
+        app: staff-db
+    spec:
+      containers:
+      - name: staff-db
+        image: postgres:15
+        env:
+        - name: POSTGRES_DB
+          value: staffdb
+        - name: POSTGRES_USER
+          value: user
+        - name: POSTGRES_PASSWORD
+          value: password
+        ports:
+        - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: staff-db
+  namespace: core-app
+spec:
+  selector:
+    app: staff-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+
+# C. Notification DB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-db
+  namespace: core-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-db
+  template:
+    metadata:
+      labels:
+        app: notification-db
+    spec:
+      containers:
+      - name: notification-db
+        image: postgres:15
+        env:
+        - name: POSTGRES_DB
+          value: notificationdb
+        - name: POSTGRES_USER
+          value: user
+        - name: POSTGRES_PASSWORD
+          value: password
+        ports:
+        - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-db
+  namespace: core-app
+spec:
+  selector:
+    app: notification-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+
+# =====================================================================
+# 3. CORE-APP NAMESPACE: App Services
+# =====================================================================
+
+# A. Order Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: core-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - name: order-container
+        image: loaiahmd/order-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: core-app
+spec:
+  selector:
+    app: order-service
+  type: NodePort
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 8000
+---
+
+# B. Staff Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: staff-service
+  namespace: core-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: staff-service
+  template:
+    metadata:
+      labels:
+        app: staff-service
+    spec:
+      containers:
+      - name: staff-container
+        image: loaiahmd/staff-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: staff-service
+  namespace: core-app
+spec:
+  selector:
+    app: staff-service
+  type: NodePort
+  ports:
+    - port: 8001
+      targetPort: 8001
+      nodePort: 8001
+---
+
+# C. Notification Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: core-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-container
+        image: loaiahmd/notification-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8002
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: core-app
+spec:
+  selector:
+    app: notification-service
+  type: NodePort
+  ports:
+    - port: 8002
+      targetPort: 8002
+      nodePort: 8002
+---
+
+# D. Reporting Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting-service
+  namespace: core-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reporting-service
+  template:
+    metadata:
+      labels:
+        app: reporting-service
+    spec:
+      containers:
+      - name: reporting-container
+        image: loaiahmd/reporting-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8003
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reporting-service
+  namespace: core-app
+spec:
+  selector:
+    app: reporting-service
+  type: NodePort
+  ports:
+    - port: 8003
+      targetPort: 8003
+      nodePort: 8003
+---
+
+# E. Frontend Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-service
+  namespace: core-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-service
+  template:
+    metadata:
+      labels:
+        app: frontend-service
+    spec:
+      containers:
+      - name: frontend-container
+        image: loaiahmd/frontend-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: core-app
+spec:
+  selector:
+    app: frontend-service
+  type: NodePort
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 3000
+---
+
+# =====================================================================
+# 4. SECURITY-MONITORING NAMESPACE
+# =====================================================================
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: controller-admin-sa
+  namespace: security-monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: controller-admin-binding
+subjects:
+- kind: ServiceAccount
+  name: controller-admin-sa
+  namespace: security-monitoring
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+
+# A. AI Threat Detector
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-threat-detector
+  namespace: security-monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-model
+  template:
+    metadata:
+      labels:
+        app: ai-model
+    spec:
+      containers:
+      - name: ai-container
+        image: gomgma/kube-detect-model:v1.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-detector-service
+  namespace: security-monitoring
+spec:
+  selector:
+    app: ai-model
+  ports:
+    - port: 5000
+      targetPort: 5000
+---
+
+# B. Automation Pipeline Controller
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: defense-automation-controller
+  namespace: security-monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pipeline-controller
+  template:
+    metadata:
+      labels:
+        app: pipeline-controller
+    spec:
+      serviceAccountName: controller-admin-sa
+      hostNetwork: true
+      containers:
+      - name: automation-controller
+        image: ziadhafez/controller:latest
+        imagePullPolicy: Always
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+---
+
+# C. Live Streamlit Dashboard
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: defense-dashboard
+  namespace: security-monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+      serviceAccountName: controller-admin-sa
+      containers:
+      - name: dashboard-container
+        image: ziadhafez/dashboard:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8501
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-service
+  namespace: security-monitoring
+spec:
+  selector:
+    app: dashboard
+  type: NodePort
+  ports:
+    - port: 8501
+      targetPort: 8501
+      nodePort: 8501
+---
+
+# =====================================================================
+# 5. DECEPTION-WORKSPACE NAMESPACE: Databases
+# =====================================================================
+
+# A. Order DB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-db
+  namespace: deception-workspace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-db
+  template:
+    metadata:
+      labels:
+        app: order-db
+    spec:
+      containers:
+      - name: order-db
+        image: postgres:15
+        env:
+        - name: POSTGRES_DB
+          value: orderdb
+        - name: POSTGRES_USER
+          value: user
+        - name: POSTGRES_PASSWORD
+          value: password
+        ports:
+        - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-db
+  namespace: deception-workspace
+spec:
+  selector:
+    app: order-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+
+# B. Staff DB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: staff-db
+  namespace: deception-workspace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: staff-db
+  template:
+    metadata:
+      labels:
+        app: staff-db
+    spec:
+      containers:
+      - name: staff-db
+        image: postgres:15
+        env:
+        - name: POSTGRES_DB
+          value: staffdb
+        - name: POSTGRES_USER
+          value: user
+        - name: POSTGRES_PASSWORD
+          value: password
+        ports:
+        - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: staff-db
+  namespace: deception-workspace
+spec:
+  selector:
+    app: staff-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+
+# C. Notification DB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-db
+  namespace: deception-workspace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-db
+  template:
+    metadata:
+      labels:
+        app: notification-db
+    spec:
+      containers:
+      - name: notification-db
+        image: postgres:15
+        env:
+        - name: POSTGRES_DB
+          value: notificationdb
+        - name: POSTGRES_USER
+          value: user
+        - name: POSTGRES_PASSWORD
+          value: password
+        ports:
+        - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-db
+  namespace: deception-workspace
+spec:
+  selector:
+    app: notification-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+
+# =====================================================================
+# 6. DECEPTION-WORKSPACE NAMESPACE: Decoy App Services
+# =====================================================================
+
+# A. Decoy Order Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: deception-workspace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - name: order-container
+        image: loaiahmd/order-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: deception-workspace
+spec:
+  selector:
+    app: order-service
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+
+# B. Decoy Staff Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: staff-service
+  namespace: deception-workspace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: staff-service
+  template:
+    metadata:
+      labels:
+        app: staff-service
+    spec:
+      containers:
+      - name: staff-container
+        image: loaiahmd/staff-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: staff-service
+  namespace: deception-workspace
+spec:
+  selector:
+    app: staff-service
+  ports:
+    - port: 8001
+      targetPort: 8001
+---
+
+# C. Decoy Notification Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: deception-workspace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-container
+        image: loaiahmd/notification-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8002
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: deception-workspace
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - port: 8002
+      targetPort: 8002
+---
+
+# D. Decoy Reporting Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting-service
+  namespace: deception-workspace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reporting-service
+  template:
+    metadata:
+      labels:
+        app: reporting-service
+    spec:
+      containers:
+      - name: reporting-container
+        image: loaiahmd/reporting-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8003
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reporting-service
+  namespace: deception-workspace
+spec:
+  selector:
+    app: reporting-service
+  ports:
+    - port: 8003
+      targetPort: 8003
+---
+
+# E. Decoy Frontend Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-service
+  namespace: deception-workspace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-service
+  template:
+    metadata:
+      labels:
+        app: frontend-service
+    spec:
+      containers:
+      - name: frontend-container
+        image: loaiahmd/frontend-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: deception-workspace
+spec:
+  selector:
+    app: frontend-service
+  ports:
+    - port: 3000
+      targetPort: 3000

@@ -1,0 +1,20 @@
+FROM python:3.9-bookworm
+
+RUN apt-get update && apt-get install -y \
+    tcpdump \
+    openjdk-17-jre-headless \
+    libpcap-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir \
+    flask \
+    requests \
+    kubernetes \
+    cicflowmeter
+
+WORKDIR /app
+
+COPY controller.py .
+
+CMD ["python", "controller.py"]
