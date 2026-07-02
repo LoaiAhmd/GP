@@ -383,7 +383,7 @@ spec:
     spec:
       containers:
       - name: ai-container
-        image: gomgma/kube-detect-model:v1.0
+        image: gomgma/kube-detect-model:v1.1
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
