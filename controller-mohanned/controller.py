@@ -15,7 +15,7 @@ except Exception as e:
 apps_v1 = client.AppsV1Api()
 
 # عنوان الموديل من خلال الـ Port-Forward
-AI_MODEL_URL = "http://localhost:8080/v1/models/custom-model:predict"
+AI_MODEL_URL = "http://localhost:5000/predict"
 
 DECOY_SERVICES = {
     "decoy-order-service": "loaiahmd/order-service:latest",
