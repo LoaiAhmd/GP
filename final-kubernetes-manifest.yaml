@@ -391,21 +391,26 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: pipeline-controller
+      app: defense-controller
   template:
     metadata:
       labels:
-        app: pipeline-controller
+        app: defense-controller
     spec:
-      serviceAccountName: controller-admin-sa
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+    
+      serviceAccountName: controller-admin-sa
+    
       containers:
-      - name: automation-controller
-        image: ziadhafez/controller:latest
-        imagePullPolicy: IfNotPresent
+      - name: controller
+        image: loaiahmd/controller:latest
+        imagePullPolicy: Always
         securityContext:
           capabilities:
-            add: ["NET_ADMIN"]
+            add:
+              - NET_ADMIN
+              - NET_RAW
 ---
 
 # C. Live Streamlit Dashboard

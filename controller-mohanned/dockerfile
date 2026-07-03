@@ -22,4 +22,6 @@ WORKDIR /app
 
 COPY controller.py .
 
-CMD ["python", "controller.py"]
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python3", "-u", "controller.py"]
