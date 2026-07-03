@@ -3,19 +3,22 @@ import requests
 from scapy.all import sniff, IP, TCP, UDP
 from kubernetes import client, config
 
-# 1. تحميل الـ Configuration الخاصة بالـ Kubernetes
 try:
-    kube_config_path = "/home/loial/.kube/config"
-    config.load_kube_config(config_file=kube_config_path)
-    print("✅ Kubernetes Configuration Loaded Successfully!")
-except Exception as e:
-    print(f"❌ Failed to load kube config: {e}")
-    exit(1)
+    config.load_incluster_config()
+    print("✅ Loaded in-cluster Kubernetes Configuration Successfully!")
+except Exception as e_incluster:
+    try:
+        config.load_kube_config()
+        print("✅ Loaded local Kubernetes Configuration Successfully!")
+    except Exception as e_local:
+        print(f"❌ Failed to load kube config (in-cluster: {e_incluster}, local: {e_local})")
+        exit(1)
 
 apps_v1 = client.AppsV1Api()
 
-# عنوان الموديل من خلال الـ Port-Forward
-AI_MODEL_URL = "http://localhost:5000/predict"
+AI_MODEL_URL = "http://ai-threat-detector-predictor.security-monitoring.svc.cluster.local/v1/models/custom-model:predict"
+
+MODEL_FEATURE_COUNT = 82
 
 DECOY_SERVICES = {
     "decoy-order-service": "loaiahmd/order-service:latest",
@@ -46,42 +49,38 @@ def deploy_decoy_microservices():
             if e.status == 409: print(f"ℹ️ Decoy {app_name} already active.")
             else: print(f"❌ Failed to deploy {app_name}: {e}")
 
-# دالة ذكية لاستخراج الـ Features من الـ Packets لايف
 def process_packet_flow(packet):
     if packet.haslayer(IP):
         ip_layer = packet[IP]
         proto = ip_layer.proto
         size = len(packet)
-        
-        # استخراج البورتات الافتراضية
+
         sport, dport = 0, 0
         if packet.haslayer(TCP):
             sport, dport = packet[TCP].sport, packet[TCP].dport
         elif packet.haslayer(UDP):
             sport, dport = packet[UDP].sport, packet[UDP].dport
-            
-        # لو الترافيك رايح للـ App (بورت 3000 أو بورتات الخدمات)
+
         if dport in [3000, 80, 8000, 8001, 8002, 8003]:
             print(f"📊 [Traffic Caught] Proto: {proto}, Size: {size} bytes, Src Port: {sport} -> Dst Port: {dport}")
-            
-            # بناء الـ Row اللي الموديل مستنيه (زياد يراجع الترتيب حسب داتا التدريب)
-            # هنا بنعمل مثال بـ 3 فيتشرز أساسية، لو الموديل محتاج أكتر ضيفوها في الـ list
-            features_row = [6, 44, 55555, 80]            
-            # إرسال البيانات للـ KServe فوراً
+
+            base_features = [6, 44, 55555, 80]
+            features_row = base_features + [0] * (82 - len(base_features))
+
             try:
                 payload = {"instances": [features_row]}
                 response = requests.post(AI_MODEL_URL, json=payload, timeout=2)
                 result = response.json()
-                
+
                 predictions = result.get("predictions", ["Normal"])
                 prediction = predictions[0] if predictions else "Normal"
                 print(f"🤖 [AI Decision]: {prediction}")
-                
+
                 if prediction == "Attack":
                     deploy_decoy_microservices()
             except Exception as e:
                 print(f"⚠️ AI Server status check: {e}")
 
 print("🚀 Pure Python Automation Controller Active. Sniffing live on network...")
-# تشغيل الـ Sniffer الداخلي لمراقبة بورتات الـ App
+
 sniff(filter="tcp port 3000 or tcp port 80", prn=process_packet_flow, store=0)

@@ -1,11 +1,15 @@
 FROM python:3.9-bookworm
 
-RUN apt-get update && apt-get install -y \
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
     tcpdump \
     openjdk-17-jre-headless \
     libpcap-dev \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && which tcpdump \
+    && tcpdump --version
 
 RUN pip install --no-cache-dir \
     flask \

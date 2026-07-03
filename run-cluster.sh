@@ -12,4 +12,7 @@ echo -e "${green}✅ Minikube is ready!${nocolor}"
 echo -e "${red}🔧 Switching to Minikube Docker environment...${nocolor}"
 eval $(minikube docker-env) > /dev/null 2>&1
 
-kubectl apply -f final-kubernetes-manifest.yaml
+kubectl apply -f final-kubernetes-manifest.yaml >/dev/null 2>&1
+echo -e "${green}✅ Kubernetes resources applied!${nocolor}"
+
+minikube service frontend-service -n core-app
