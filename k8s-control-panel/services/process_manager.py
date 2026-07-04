@@ -16,20 +16,36 @@ class ProcessManager(QObject):
     def run_script(self, script):
         self.run_command("bash", [script])
 
-    def read_stdout(self):
-        text = bytes(self.process.readAllStandardOutput()).decode()
-        self.terminal.append(text.rstrip())
-
-    def read_stderr(self):
-        text = bytes(self.process.readAllStandardError()).decode()
-        self.terminal.append(text.rstrip())
-
-    def finished(self):
-        self.terminal.append("\n===== Process Finished =====")
-
     def run_command(self, program, arguments):
+
+        if self.process.state() != QProcess.NotRunning:
+            self.stop()
+
+        self.process.start(program, arguments)
+
+    def stop(self):
+
         if self.process.state() != QProcess.NotRunning:
             self.process.kill()
             self.process.waitForFinished()
 
-        self.process.start(program, arguments)
+            self.terminal.append("\n===== Process Stopped =====")
+
+    def read_stdout(self):
+
+        text = bytes(
+            self.process.readAllStandardOutput()
+        ).decode()
+
+        self.terminal.append(text.rstrip())
+
+    def read_stderr(self):
+
+        text = bytes(
+            self.process.readAllStandardError()
+        ).decode()
+
+        self.terminal.append(text.rstrip())
+
+    def finished(self):
+        self.terminal.append("\n===== Process Finished =====")
