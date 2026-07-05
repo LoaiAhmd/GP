@@ -10,10 +10,10 @@ class TerminalWidget(QPlainTextEdit):
 
         self.setStyleSheet("""
             QPlainTextEdit {
-                background: #1E1E1E;
-                color: #00FF66;
+                background: #000000;
+                color: #49fa5e;
                 font-family: Consolas;
-                font-size: 11pt;
+                font-size: 12pt;
             }
         """)
 

@@ -1,0 +1,186 @@
+/* ===========================
+   GLOBAL
+=========================== */
+
+QMainWindow,
+QWidget {
+    background-color: #000000;
+    color: #e5e7eb;
+    font-size: 11pt;
+    font-family: "Segoe UI";
+}
+
+/* ===========================
+   BUTTONS
+=========================== */
+
+QPushButton {
+    background: transparent;
+    color: #49fa5e;
+    border: 2px solid #32a640;
+    border-radius: 10px;
+    padding: 8px;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background: #32a640;
+    color: black;
+}
+
+QPushButton:pressed {
+    background: #49fa5e;
+    color: black;
+}
+
+
+QPushButton#GreenButton {
+    background-color: #05c347;
+    color: #000;
+    border: 2px solid #00ff88;
+}
+QPushButton#GreenButton:hover {
+    background: #56f869;
+    color: black;
+}
+
+QPushButton#RedButton {
+    color: #fa1313;
+    border: 2px solid #fa1313;
+}
+
+QPushButton#RedButton:hover {
+    background: #fa1313;
+    color: black;
+}
+
+QPushButton#ExitButton {
+    background: #fa1313;
+    color: #000;
+    border: 2px solid #ff5252;
+}
+
+/* ===========================
+   GROUPS / FRAMES
+=========================== */
+
+QFrame {
+    background-color: #0b0f18;
+    border: 1px solid #1f2937;
+    border-radius: 5px;
+}
+
+/* ===========================
+   LABELS
+=========================== */
+
+QLabel {
+    color: white;
+}
+
+/* ===========================
+   TABS
+=========================== */
+
+QTabWidget::pane {
+    border: 1px solid #32a640;
+    border-radius: 5px;
+}
+
+QTabBar::tab {
+    background: #111827;
+    color: white;
+    padding: 8px 20px;
+    border: 1px solid #32a640;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+QTabBar::tab:selected {
+    background: #32a640;
+    color: black;
+}
+
+QTabBar::tab:hover {
+    background: #49fa5e;
+    color: black;
+}
+
+/* ===========================
+   TABLES
+=========================== */
+
+QTableWidget {
+    background: #111827;
+    alternate-background-color: #162033;
+    color: white;
+    gridline-color: #32a640;
+    border: 1px solid #32a640;
+    selection-background-color: #00ff88;
+    selection-color: black;
+}
+
+QHeaderView::section {
+    background: #32a640;
+    color: black;
+    padding: 6px;
+    font-weight: bold;
+    border: none;
+}
+
+/* ===========================
+   TEXT EDIT
+=========================== */
+
+QPlainTextEdit,
+QTextEdit {
+    background: #050b12;
+    color: #00ff88;
+    border: 1px solid #32a640;
+    border-radius: 5px;
+    selection-background-color: #32a640;
+    selection-color: black;
+}
+
+/* ===========================
+   STATUS BAR
+=========================== */
+
+QStatusBar {
+    background: #111827;
+    color: #00ff88;
+}
+
+/* ===========================
+   SCROLL BAR
+=========================== */
+
+QScrollBar:vertical {
+    background: #111827;
+    width: 10px;
+}
+
+QScrollBar::handle:vertical {
+    background: #32a640;
+    border-radius: 5px;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+QScrollBar:horizontal {
+    background: #111827;
+    height: 10px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #32a640;
+    border-radius: 5px;
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    width: 0;
+}

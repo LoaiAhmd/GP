@@ -16,11 +16,12 @@ RUN pip install --no-cache-dir \
     requests \
     kubernetes \
     cicflowmeter \
-    scapy
+    scapy \
+    && sed -i 's/EXPIRED_UPDATE = 240/EXPIRED_UPDATE = 10/' /usr/local/lib/python3.9/site-packages/cicflowmeter/constants.py
 
 WORKDIR /app
 
-COPY controller.py .
+COPY . .
 
 ENV PYTHONUNBUFFERED=1
 

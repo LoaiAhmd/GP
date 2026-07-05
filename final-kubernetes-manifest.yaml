@@ -404,52 +404,13 @@ spec:
     
       containers:
       - name: controller
-        image: loaiahmd/controller:latest
-        imagePullPolicy: Always
+        image: loaiahmd/controller:v5
+        imagePullPolicy: IfNotPresent
         securityContext:
           capabilities:
             add:
               - NET_ADMIN
               - NET_RAW
----
-
-# C. Live Streamlit Dashboard
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: defense-dashboard
-  namespace: security-monitoring
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: dashboard
-  template:
-    metadata:
-      labels:
-        app: dashboard
-    spec:
-      serviceAccountName: controller-admin-sa
-      containers:
-      - name: dashboard-container
-        image: ziadhafez/dashboard:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8501
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: dashboard-service
-  namespace: security-monitoring
-spec:
-  selector:
-    app: dashboard
-  type: NodePort
-  ports:
-    - port: 8501
-      targetPort: 8501
-      nodePort: 8501
 ---
 
 # =====================================================================
