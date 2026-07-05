@@ -1,26 +1,42 @@
 #!/bin/bash
 
 echo -e "\tRestarting Core Application..."
-kubectl rollout restart deployment -n core-app
 
-echo -e "\n\tRestarting Security Monitoring..."
-kubectl rollout restart deployment -n security-monitoring
+CORE_DEPLOYMENTS=(
+    frontend-service
+    notification-db
+    notification-service
+    order-db
+    order-service
+    reporting-service
+    staff-db
+    staff-service
+)
+
+for d in "${CORE_DEPLOYMENTS[@]}"
+do
+    kubectl rollout restart deployment/$d -n core-app
+done
+
+echo
+echo -e "\tRestarting Security Monitoring..."
+
+kubectl rollout restart deployment/defense-automation-controller \
+    -n security-monitoring
 
 echo
 echo -e "\tWaiting for Core Application..."
 
-for d in $(kubectl get deployment -n core-app -o jsonpath='{.items[*].metadata.name}')
+for d in "${CORE_DEPLOYMENTS[@]}"
 do
     kubectl rollout status deployment/$d -n core-app
 done
 
 echo
-echo -e "\n\tWaiting for Security Monitoring..."
+echo -e "\tWaiting for Controller..."
 
-for d in $(kubectl get deployment -n security-monitoring -o jsonpath='{.items[*].metadata.name}')
-do
-    kubectl rollout status deployment/$d -n security-monitoring
-done
+kubectl rollout status deployment/defense-automation-controller \
+    -n security-monitoring
 
 echo
 echo "✅ Restart Complete."

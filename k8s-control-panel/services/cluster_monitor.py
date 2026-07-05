@@ -4,42 +4,74 @@ from PySide6.QtCore import QObject, QProcess, QTimer
 class ClusterMonitor(QObject):
 
     def __init__(self, window):
-
         super().__init__()
 
         self.window = window
 
-        self.timer = QTimer()
+        self.processes = []
 
+        self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
+        self.timer.start(15000)
 
-        self.timer.start(5000)
+        self.refresh()
+
+    # =========================================================
 
     def refresh(self):
 
         self.check_minikube()
-        self.check_controller()
-        self.check_kserve()
-        self.check_frontend()
+        self.check_deployments()
+
+    # =========================================================
 
     def run(self, command, callback):
 
-        process = QProcess()
+        process = QProcess(self)
+
+        self.processes.append(process)
 
         process.finished.connect(
-            lambda:
-            callback(
-                bytes(process.readAllStandardOutput()).decode()
-            )
+            lambda exitCode, exitStatus, p=process:
+            self.finished(p, callback)
         )
 
         process.start("bash", ["-c", command])
+
+    def finished(self, process, callback):
+
+        output = bytes(
+            process.readAllStandardOutput()
+        ).decode()
+
+        callback(output)
+
+        if process in self.processes:
+            self.processes.remove(process)
+
+        process.deleteLater()
+
+    # =========================================================
+
+    def stop(self):
+
+        self.timer.stop()
+
+        for process in self.processes:
+
+            if process.state() != QProcess.NotRunning:
+                process.kill()
+                process.waitForFinished()
+
+        self.processes.clear()
+
+    # =========================================================
 
     def check_minikube(self):
 
         self.run(
             "minikube status",
-            self.parse_minikube
+            self.parse_minikube,
         )
 
     def parse_minikube(self, output):
@@ -49,53 +81,61 @@ class ClusterMonitor(QObject):
         else:
             self.window.minikube_card.set_stopped()
 
-    def check_controller(self):
+    # =========================================================
 
-        cmd = (
-            "kubectl get deployment "
-            "defense-automation-controller "
-            "-n security-monitoring"
+    def check_deployments(self):
+
+        self.run(
+            "kubectl get deployments -A --no-headers",
+            self.parse_deployments,
         )
 
-        self.run(cmd, self.parse_controller)
+    def parse_deployments(self, output):
 
-    def parse_controller(self, output):
+        controller = False
+        kserve = False
+        frontend = False
 
-        if "1/1" in output:
+        for line in output.splitlines():
+
+            cols = line.split()
+
+            if len(cols) < 3:
+                continue
+
+            namespace = cols[0]
+            name = cols[1]
+            ready = cols[2]
+
+            if (
+                namespace == "security-monitoring"
+                and name == "defense-automation-controller"
+            ):
+                controller = ready.startswith("1/1")
+
+            elif (
+                namespace == "kserve"
+                and name == "kserve-controller-manager"
+            ):
+                kserve = ready.startswith("2/2") or ready.startswith("1/1")
+
+            elif (
+                namespace == "core-app"
+                and name == "frontend-service"
+            ):
+                frontend = ready.startswith("1/1")
+
+        if controller:
             self.window.controller_card.set_running()
         else:
             self.window.controller_card.set_stopped()
 
-    def check_kserve(self):
-
-        cmd = (
-            "kubectl get deployment "
-            "kserve-controller-manager "
-            "-n kserve"
-        )
-
-        self.run(cmd, self.parse_kserve)
-
-    def parse_kserve(self, output):
-
-        if "1/1" in output or "2/2" in output:
+        if kserve:
             self.window.kserve_card.set_running()
         else:
             self.window.kserve_card.set_stopped()
 
-    def check_frontend(self):
-
-        cmd = (
-            "kubectl get deployment "
-            "frontend-service "
-            "-n core-app"
-        )
-
-        self.run(cmd, self.parse_frontend)
-
-    def parse_frontend(self, output):
-
-        if "1/1" in output:
+        if frontend:
             self.window.frontend_card.set_running()
         else:
             self.window.frontend_card.set_stopped()

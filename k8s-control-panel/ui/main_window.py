@@ -267,7 +267,11 @@ class MainWindow(QMainWindow):
         self.close()
 
     def closeEvent(self, event):
+
         self.process_manager.stop()
+    
+        if hasattr(self.monitor, "stop"):
+            self.monitor.stop()
     
         if hasattr(self.data, "stop"):
             self.data.stop()
