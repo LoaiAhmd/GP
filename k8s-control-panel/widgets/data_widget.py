@@ -17,6 +17,9 @@ class DataWidget(QWidget):
 
         self.pod_process = None
         self.event_process = None
+        self.log_process = None
+        self.log_buffer = ""
+        self.attacks_data = []
 
         layout = QVBoxLayout(self)
 
@@ -74,6 +77,24 @@ class DataWidget(QWidget):
         self.tabs.addTab(events_page, "Cluster Events")
 
         # =====================================================
+        # Attacks Tab
+        # =====================================================
+        attacks_page = QWidget()
+        attacks_layout = QVBoxLayout(attacks_page)
+        attacks_layout.addWidget(QLabel("<h2>Detected Attacks</h2>"))
+
+        self.attacks_table = QTableWidget()
+        self.attacks_table.setColumnCount(3)
+        self.attacks_table.setHorizontalHeaderLabels([
+            "Which Pod/Port",
+            "Attack Type",
+            "Time",
+        ])
+        attacks_layout.addWidget(self.attacks_table)
+
+        self.tabs.addTab(attacks_page, "Attacks")
+
+        # =====================================================
         # Timer
         # =====================================================
 
@@ -88,44 +109,49 @@ class DataWidget(QWidget):
     # =====================================================
 
     def start(self):
-
         if not self.timer.isActive():
             self.timer.start(5000)
+
+        if self.log_process is None:
+            self.log_process = QProcess(self)
+            self.log_process.readyReadStandardOutput.connect(self.read_controller_logs)
+            self.log_process.start("kubectl", [
+                "logs",
+                "-f",
+                "deployment/defense-automation-controller",
+                "-n",
+                "security-monitoring",
+                "--tail=100"
+            ])
 
         self.refresh()
 
     def stop(self):
-
         self.timer.stop()
 
-        for process in (self.pod_process, self.event_process):
-
+        for process in (self.pod_process, self.event_process, self.log_process):
             if process is None:
                 continue
 
             if process.state() != QProcess.NotRunning:
-
                 process.terminate()
-
                 if not process.waitForFinished(1000):
                     process.kill()
                     process.waitForFinished()
-
             process.deleteLater()
 
         self.pod_process = None
         self.event_process = None
-
-    # =====================================================
-    # Refresh
-    # =====================================================
+        self.log_process = None
 
     def refresh(self):
-
-        if self.tabs.currentIndex() == 0:
+        idx = self.tabs.currentIndex()
+        if idx == 0:
             self.load_pods()
-        else:
+        elif idx == 1:
             self.load_events()
+        elif idx == 2:
+            self.update_attacks_table()
 
     # =====================================================
     # Pods
@@ -242,3 +268,50 @@ class DataWidget(QWidget):
 
         self.event_process.deleteLater()
         self.event_process = None
+
+    # =====================================================
+    # Attacks Stream Parser
+    # =====================================================
+
+    def read_controller_logs(self):
+        if self.log_process is None:
+            return
+        text = bytes(self.log_process.readAllStandardOutput()).decode(errors="ignore")
+        self.log_buffer += text
+
+        import re
+        import json
+
+        pattern = re.compile(r"FLOW \d+ (\{.*?^})", re.DOTALL | re.MULTILINE)
+        matches = list(pattern.finditer(self.log_buffer))
+
+        if matches:
+            last_end = 0
+            for match in matches:
+                json_str = match.group(1)
+                try:
+                    data = json.loads(json_str)
+                    prediction = data.get("prediction", "")
+                    attack_type = data.get("attack_type", "None")
+
+                    # If this is an attack
+                    if attack_type != "None" or "attack" in prediction.lower():
+                        pod_port = f"{data.get('source')} -> {data.get('destination')}"
+                        timestamp = data.get("time", "unknown")
+                        
+                        record = (pod_port, attack_type, timestamp)
+                        if record not in self.attacks_data:
+                            self.attacks_data.insert(0, record)
+                            self.update_attacks_table()
+                except Exception:
+                    pass
+                last_end = match.end()
+            self.log_buffer = self.log_buffer[last_end:]
+
+    def update_attacks_table(self):
+        self.attacks_table.setRowCount(len(self.attacks_data))
+        for r, (pod_port, attack_type, timestamp) in enumerate(self.attacks_data):
+            self.attacks_table.setItem(r, 0, QTableWidgetItem(pod_port))
+            self.attacks_table.setItem(r, 1, QTableWidgetItem(attack_type))
+            self.attacks_table.setItem(r, 2, QTableWidgetItem(timestamp))
+        self.attacks_table.resizeColumnsToContents()

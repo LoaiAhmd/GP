@@ -6,7 +6,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QGridLayout,
     QFrame,
-    QTabWidget
+    QTabWidget,
+    QStyle
 )
 
 from widgets.terminal_widget import TerminalWidget
@@ -154,9 +155,21 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Ready")
 
         #================================
-        #Buttons Styling
+        #Buttons Styling & Icons
         #================================
+        self.btn_start.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+        self.btn_stop_cluster.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop))
+        self.btn_deploy.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))
+        self.btn_frontend.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowRight))
+        self.btn_restart.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
         
+        self.btn_data.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
+        self.btn_controller.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogInfoView))
+        self.btn_kserve.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogInfoView))
+        
+        self.btn_stop.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton))
+        self.btn_clear.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon))
+        self.btn_exit.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCloseButton))
 
 
     # =====================================================

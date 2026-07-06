@@ -428,7 +428,7 @@ spec:
     
       containers:
       - name: controller
-        image: loaiahmd/controller:v10
+        image: loaiahmd/controller:v11
         imagePullPolicy: IfNotPresent
         securityContext:
           capabilities:

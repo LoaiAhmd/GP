@@ -39,8 +39,16 @@ class StatusCard(QFrame):
 
         main_layout.addWidget(self.title)
         main_layout.addLayout(status_layout)
+        self.set_unknown()
 
     def set_running(self):
+        self.setStyleSheet("""
+            StatusCard {
+                background-color: #092617;
+                border: 2px solid #27ae60;
+                border-radius: 5px;
+            }
+        """)
         self.circle.setStyleSheet("""
             QLabel {
                 background: #27ae60;
@@ -50,6 +58,13 @@ class StatusCard(QFrame):
         self.status.setText("Running")
 
     def set_stopped(self):
+        self.setStyleSheet("""
+            StatusCard {
+                background-color: #280d0d;
+                border: 2px solid #e74c3c;
+                border-radius: 5px;
+            }
+        """)
         self.circle.setStyleSheet("""
             QLabel {
                 background: #e74c3c;
@@ -59,6 +74,13 @@ class StatusCard(QFrame):
         self.status.setText("Stopped")
 
     def set_unknown(self):
+        self.setStyleSheet("""
+            StatusCard {
+                background-color: #0b0f18;
+                border: 1px solid #1f2937;
+                border-radius: 5px;
+            }
+        """)
         self.circle.setStyleSheet("""
             QLabel {
                 background: gray;

@@ -244,6 +244,7 @@ def main() -> None:
                 attack_type = "Reconnaissance (Reconn)"
 
         flow_log = {
+            "time": time.strftime("%H:%M:%S"),
             "source": f"{src_service} ({src_ip}:{src_port})",
             "destination": f"{dst_service} ({dst_ip}:{dst_port})",
             "protocol": row.get("protocol"),
