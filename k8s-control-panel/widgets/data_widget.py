@@ -5,6 +5,8 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
+    QPushButton,
+    QStyle,
 )
 
 from PySide6.QtCore import QTimer, QProcess
@@ -87,11 +89,17 @@ class DataWidget(QWidget):
         self.attacks_table.setColumnCount(4)
         self.attacks_table.setHorizontalHeaderLabels([
             "Flow ID",
-            "Source -> Destination",
+            "Src -> Dest",
             "Attack Type",
             "Time",
         ])
         attacks_layout.addWidget(self.attacks_table)
+
+        self.btn_clear_attacks = QPushButton("Clear Attacks")
+        self.btn_clear_attacks.setObjectName("RedButton")
+        self.btn_clear_attacks.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon))
+        self.btn_clear_attacks.clicked.connect(self.clear_attacks)
+        attacks_layout.addWidget(self.btn_clear_attacks)
 
         self.tabs.addTab(attacks_page, "Attacks")
 
@@ -122,7 +130,7 @@ class DataWidget(QWidget):
                 "deployment/defense-automation-controller",
                 "-n",
                 "security-monitoring",
-                "--tail=100"
+                "--tail=0"
             ])
 
         self.refresh()
@@ -318,3 +326,7 @@ class DataWidget(QWidget):
             self.attacks_table.setItem(r, 2, QTableWidgetItem(attack_type))
             self.attacks_table.setItem(r, 3, QTableWidgetItem(timestamp))
         self.attacks_table.resizeColumnsToContents()
+
+    def clear_attacks(self):
+        self.attacks_data = []
+        self.update_attacks_table()
