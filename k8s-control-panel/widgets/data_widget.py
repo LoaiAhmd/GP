@@ -84,9 +84,10 @@ class DataWidget(QWidget):
         attacks_layout.addWidget(QLabel("<h2>Detected Attacks</h2>"))
 
         self.attacks_table = QTableWidget()
-        self.attacks_table.setColumnCount(3)
+        self.attacks_table.setColumnCount(4)
         self.attacks_table.setHorizontalHeaderLabels([
-            "Which Pod/Port",
+            "Flow ID",
+            "Source -> Destination",
             "Attack Type",
             "Time",
         ])
@@ -282,13 +283,14 @@ class DataWidget(QWidget):
         import re
         import json
 
-        pattern = re.compile(r"FLOW \d+ (\{.*?^})", re.DOTALL | re.MULTILINE)
+        pattern = re.compile(r"FLOW (\d+) (\{.*?^})", re.DOTALL | re.MULTILINE)
         matches = list(pattern.finditer(self.log_buffer))
 
         if matches:
             last_end = 0
             for match in matches:
-                json_str = match.group(1)
+                flow_id = match.group(1)
+                json_str = match.group(2)
                 try:
                     data = json.loads(json_str)
                     prediction = data.get("prediction", "")
@@ -299,7 +301,7 @@ class DataWidget(QWidget):
                         pod_port = f"{data.get('source')} -> {data.get('destination')}"
                         timestamp = data.get("time", "unknown")
                         
-                        record = (pod_port, attack_type, timestamp)
+                        record = (f"Flow #{flow_id}", pod_port, attack_type, timestamp)
                         if record not in self.attacks_data:
                             self.attacks_data.insert(0, record)
                             self.update_attacks_table()
@@ -310,8 +312,9 @@ class DataWidget(QWidget):
 
     def update_attacks_table(self):
         self.attacks_table.setRowCount(len(self.attacks_data))
-        for r, (pod_port, attack_type, timestamp) in enumerate(self.attacks_data):
-            self.attacks_table.setItem(r, 0, QTableWidgetItem(pod_port))
-            self.attacks_table.setItem(r, 1, QTableWidgetItem(attack_type))
-            self.attacks_table.setItem(r, 2, QTableWidgetItem(timestamp))
+        for r, (flow_id, pod_port, attack_type, timestamp) in enumerate(self.attacks_data):
+            self.attacks_table.setItem(r, 0, QTableWidgetItem(flow_id))
+            self.attacks_table.setItem(r, 1, QTableWidgetItem(pod_port))
+            self.attacks_table.setItem(r, 2, QTableWidgetItem(attack_type))
+            self.attacks_table.setItem(r, 3, QTableWidgetItem(timestamp))
         self.attacks_table.resizeColumnsToContents()
