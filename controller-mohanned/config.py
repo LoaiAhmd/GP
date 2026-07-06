@@ -9,7 +9,7 @@ so they can be adjusted without modifying business logic.
 # KServe / AI Model
 # ─────────────────────────────────────────────
 AI_MODEL_URL = (
-    "http://ai-threat-detector-predictor"
+    "http://ai-threat-detector-service"
     ".security-monitoring.svc.cluster.local"
     "/v1/models/custom-model:predict"
 )

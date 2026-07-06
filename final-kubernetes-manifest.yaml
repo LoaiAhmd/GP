@@ -352,16 +352,27 @@ metadata:
   namespace: security-monitoring
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: Role
 metadata:
-  name: controller-admin-binding
+  name: decoy-controller-role
+  namespace: deception-workspace
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: decoy-controller-binding
+  namespace: deception-workspace
 subjects:
 - kind: ServiceAccount
   name: controller-admin-sa
   namespace: security-monitoring
 roleRef:
-  kind: ClusterRole
-  name: cluster-admin
+  kind: Role
+  name: decoy-controller-role
   apiGroup: rbac.authorization.k8s.io
 ---
 
@@ -379,6 +390,19 @@ spec:
       ports:
         - containerPort: 8080
           protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-threat-detector-service
+  namespace: security-monitoring
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  selector:
+    serving.kserve.io/inferenceservice: ai-threat-detector
 ---
 
 # B. Automation Pipeline Controller
@@ -404,7 +428,7 @@ spec:
     
       containers:
       - name: controller
-        image: loaiahmd/controller:v5
+        image: loaiahmd/controller:v10
         imagePullPolicy: IfNotPresent
         securityContext:
           capabilities:

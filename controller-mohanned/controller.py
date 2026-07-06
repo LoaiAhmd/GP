@@ -15,6 +15,7 @@ Workflow:
 """
 
 import time
+import json
 import traceback
 
 from kubernetes import client, config
@@ -64,12 +65,21 @@ def load_k8s_config() -> None:
 # ---------------------------------------------------------
 
 apps_v1: client.AppsV1Api | None = None
+decoys_deployed = False
 
 
 def deploy_decoy_microservices() -> None:
-    """Deploy deception (decoy) services into the deception-workspace."""
-    print("[ALERT] Attack verified. Deploying deception services...", flush=True)
+    global decoys_deployed
 
+    if decoys_deployed:
+        print("[INFO] Decoys already deployed.", flush=True)
+        return
+
+    print("[ALERT] Attack verified. Deploying deception services...", flush=True)
+    try:
+        apps_v1.list_namespaced_deployment(DECOY_NAMESPACE)
+    except Exception:
+        return
     for app_name, image_url in DECOY_SERVICES.items():
         deployment = client.V1Deployment(
             metadata=client.V1ObjectMeta(
@@ -109,6 +119,7 @@ def deploy_decoy_microservices() -> None:
                 print(f"  [INFO] {app_name} already exists.", flush=True)
             else:
                 print(e, flush=True)
+    decoys_deployed = True
 
 
 def describe_flow(row: dict) -> str:
@@ -146,6 +157,17 @@ def main() -> None:
     print("[OK] Creating Kubernetes client...", flush=True)
     apps_v1 = client.AppsV1Api()
 
+    # Query cluster to see if decoy deployments are already present
+    global decoys_deployed
+    try:
+        existing = apps_v1.list_namespaced_deployment(DECOY_NAMESPACE)
+        existing_names = {dep.metadata.name for dep in existing.items}
+        if any(name in existing_names for name in DECOY_SERVICES.keys()):
+            decoys_deployed = True
+            print("[INFO] Detected existing decoy deployments. Deception active.", flush=True)
+    except Exception as e:
+        print(f"[WARN] Failed to query existing decoy deployments: {e}", flush=True)
+
     # 2. Start live packet capture
     capture = LiveFlowCapture()
     capture.start()
@@ -178,14 +200,10 @@ def main() -> None:
                 )
             continue
 
-        print(f"\n[FLOW {flow_count}] {flow_summary}", flush=True)
-
         # 3a. Parse feature vector
         features = parse_features(row)
         if features is None:
             continue
-
-        print(f"[FLOW {flow_count}] features={len(features)} expected=82", flush=True)
 
         # 3b. Send to KServe
         prediction = predict(features, flow_id=flow_count)
@@ -194,15 +212,48 @@ def main() -> None:
 
         # 3c. Act on prediction
         label = LABELS.get(prediction, prediction)
-
         normalized_label = label.strip().lower()
 
+        action = "normal traffic -- no action"
         if prediction == "2" or normalized_label == "suspicious":
-            print(f"[FLOW {flow_count}] suspicious traffic -- monitoring", flush=True)
+            action = "suspicious traffic -- monitoring"
         elif prediction == "0" or normalized_label in {"normal", "benign"}:
-            print(f"[FLOW {flow_count}] normal traffic -- no action", flush=True)
+            action = "normal traffic -- no action"
         else:
-            deploy_decoy_microservices()
+            if decoys_deployed:
+                action = "ATTACK detected -- decoys already deployed"
+            else:
+                action = "ATTACK detected -- deploying deception services"
+                deploy_decoy_microservices()
+
+        # Print formatted JSON block for flow
+        src_ip = row.get("src_ip", "?")
+        dst_ip = row.get("dst_ip", "?")
+        src_port = str(row.get("src_port", "?"))
+        dst_port = str(row.get("dst_port", "?"))
+        
+        src_service = SERVICE_PORTS.get(src_port, "client" if src_ip == "192.168.49.1" else "other")
+        dst_service = SERVICE_PORTS.get(dst_port, "client" if dst_ip == "192.168.49.1" else "other")
+
+        # Determine attack type
+        attack_type = "None"
+        if prediction not in ("0", "2") and normalized_label not in ("normal", "benign", "suspicious"):
+            if service in ("frontend", "order", "staff", "notification", "reporting"):
+                attack_type = "SSRF (Server-Side Request Forgery)"
+            else:
+                attack_type = "Reconnaissance (Reconn)"
+
+        flow_log = {
+            "source": f"{src_service} ({src_ip}:{src_port})",
+            "destination": f"{dst_service} ({dst_ip}:{dst_port})",
+            "protocol": row.get("protocol"),
+            "service": service,
+            "features": len(features),
+            "prediction": label,
+            "attack_type": attack_type,
+            "action": action
+        }
+        print(f"\nFLOW {flow_count} {json.dumps(flow_log, indent=2)}", flush=True)
 
 
 if __name__ == "__main__":
