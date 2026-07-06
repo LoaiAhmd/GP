@@ -28,10 +28,10 @@ LABELS = {
 CAPTURE_INTERFACE = "eth0"
 
 # How many seconds of inactivity before a flow is considered expired
-FLOW_EXPIRED_SECONDS = 10
+FLOW_EXPIRED_SECONDS = 1.5
 
 # How often (seconds) the garbage collector checks for expired flows
-GC_INTERVAL = 5
+GC_INTERVAL = 1.0
 
 # Keep the main controller log focused on analyzed flows.
 VERBOSE_GC = False

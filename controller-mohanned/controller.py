@@ -34,9 +34,10 @@ SERVICE_PORTS = {
     "8003": "reporting",
     "8443": "kubernetes-api",
     "22": "ssh",
+    "80": "http",
 }
 
-MONITORED_SERVICES = {"frontend", "order", "staff", "notification", "reporting"}
+MONITORED_SERVICES = {"frontend", "order", "staff", "notification", "reporting", "ssh", "kubernetes-api", "http"}
 SKIP_LOG_EVERY = 25
 
 
@@ -178,7 +179,19 @@ def main() -> None:
     # 3. Process completed flows from the queue
     flow_count = 0
     skipped_count = 0
+    log_buffer = []
+    last_print_time = time.time()
     while True:
+        # Flush log buffer at a controlled rate (at most 10 logs every 3 seconds)
+        now = time.time()
+        if now - last_print_time >= 3.0:
+            if log_buffer:
+                to_print = log_buffer[:10]
+                log_buffer = log_buffer[10:]
+                for msg in to_print:
+                    print(msg, flush=True)
+            last_print_time = now
+
         try:
             # Block for up to 1 second waiting for a flow
             row = capture.flow_queue.get(timeout=1.0)
@@ -238,10 +251,14 @@ def main() -> None:
         # Determine attack type
         attack_type = "None"
         if prediction not in ("0", "2") and normalized_label not in ("normal", "benign", "suspicious"):
-            if service in ("frontend", "order", "staff", "notification", "reporting"):
-                attack_type = "SSRF (Server-Side Request Forgery)"
-            else:
+            tot_fwd_bytes = float(row.get("totlen_fwd_pkts", 0))
+            if tot_fwd_bytes < 100:
                 attack_type = "Reconnaissance (Reconn)"
+            else:
+                if service in ("frontend", "order", "staff", "notification", "reporting"):
+                    attack_type = "SSRF (Server-Side Request Forgery)"
+                else:
+                    attack_type = "Reconnaissance (Reconn)"
 
         flow_log = {
             "time": time.strftime("%H:%M:%S"),
@@ -254,7 +271,7 @@ def main() -> None:
             "attack_type": attack_type,
             "action": action
         }
-        print(f"\nFLOW {flow_count} {json.dumps(flow_log, indent=2)}", flush=True)
+        log_buffer.append(f"\nFLOW {flow_count} {json.dumps(flow_log, indent=2)}")
 
 
 if __name__ == "__main__":

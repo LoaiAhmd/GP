@@ -119,18 +119,19 @@ class DataWidget(QWidget):
 
     def start(self):
         if not self.timer.isActive():
-            self.timer.start(5000)
+            self.timer.start(1000)
 
         if self.log_process is None:
             self.log_process = QProcess(self)
             self.log_process.readyReadStandardOutput.connect(self.read_controller_logs)
+            self.log_process.finished.connect(self.on_log_process_finished)
             self.log_process.start("kubectl", [
                 "logs",
                 "-f",
                 "deployment/defense-automation-controller",
                 "-n",
                 "security-monitoring",
-                "--tail=0"
+                "--tail=100"
             ])
 
         self.refresh()
@@ -307,7 +308,8 @@ class DataWidget(QWidget):
                     # If this is an attack
                     if attack_type != "None" or "attack" in prediction.lower():
                         pod_port = f"{data.get('source')} -> {data.get('destination')}"
-                        timestamp = data.get("time", "unknown")
+                        import datetime
+                        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
                         
                         record = (f"Flow #{flow_id}", pod_port, attack_type, timestamp)
                         if record not in self.attacks_data:
@@ -330,3 +332,8 @@ class DataWidget(QWidget):
     def clear_attacks(self):
         self.attacks_data = []
         self.update_attacks_table()
+
+    def on_log_process_finished(self):
+        self.log_process = None
+        if self.timer.isActive():
+            QTimer.singleShot(2000, self.start)
