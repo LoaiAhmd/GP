@@ -8,68 +8,75 @@ class ClusterMonitor(QObject):
 
         self.window = window
 
-        self.processes = []
-
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
-        self.timer.start(15000)
+        self.timer.start(5000)
 
-        self.refresh()
+        self.minikube_process = None
+        self.controller_process = None
+        self.kserve_process = None
+        self.frontend_process = None
 
-    # =========================================================
+    # =====================================================
+    # Timer
+    # =====================================================
 
     def refresh(self):
 
         self.check_minikube()
-        self.check_deployments()
+        self.check_controller()
+        self.check_kserve()
+        self.check_frontend()
 
-    # =========================================================
+    # =====================================================
+    # Generic Runner
+    # =====================================================
 
-    def run(self, command, callback):
+    def run(self, process_attr, command, callback):
+
+        process = getattr(self, process_attr)
+
+        if process is not None:
+            if process.state() != QProcess.NotRunning:
+                return
+
+            process.deleteLater()
 
         process = QProcess(self)
 
-        self.processes.append(process)
+        setattr(self, process_attr, process)
 
         process.finished.connect(
-            lambda exitCode, exitStatus, p=process:
-            self.finished(p, callback)
+            lambda: self.process_finished(process_attr, callback)
         )
 
         process.start("bash", ["-c", command])
 
-    def finished(self, process, callback):
+    def process_finished(self, process_attr, callback):
+
+        process = getattr(self, process_attr)
+
+        if process is None:
+            return
 
         output = bytes(
             process.readAllStandardOutput()
-        ).decode()
+        ).decode(errors="ignore")
 
         callback(output)
 
-        if process in self.processes:
-            self.processes.remove(process)
-
         process.deleteLater()
 
-    # =========================================================
+        setattr(self, process_attr, None)
 
-    def stop(self):
-
-        self.timer.stop()
-
-        for process in self.processes:
-
-            if process.state() != QProcess.NotRunning:
-                process.kill()
-                process.waitForFinished()
-
-        self.processes.clear()
-
-    # =========================================================
+    # =====================================================
+    # Minikube
+    # =====================================================
 
     def check_minikube(self):
 
         self.run(
+            "minikube_process",
             "minikube status",
             self.parse_minikube,
         )
@@ -81,61 +88,91 @@ class ClusterMonitor(QObject):
         else:
             self.window.minikube_card.set_stopped()
 
-    # =========================================================
+    # =====================================================
+    # Controller
+    # =====================================================
 
-    def check_deployments(self):
+    def check_controller(self):
 
         self.run(
-            "kubectl get deployments -A --no-headers",
-            self.parse_deployments,
+            "controller_process",
+            "kubectl get deployment defense-automation-controller -n security-monitoring",
+            self.parse_controller,
         )
 
-    def parse_deployments(self, output):
+    def parse_controller(self, output):
 
-        controller = False
-        kserve = False
-        frontend = False
-
-        for line in output.splitlines():
-
-            cols = line.split()
-
-            if len(cols) < 3:
-                continue
-
-            namespace = cols[0]
-            name = cols[1]
-            ready = cols[2]
-
-            if (
-                namespace == "security-monitoring"
-                and name == "defense-automation-controller"
-            ):
-                controller = ready.startswith("1/1")
-
-            elif (
-                namespace == "kserve"
-                and name == "kserve-controller-manager"
-            ):
-                kserve = ready.startswith("2/2") or ready.startswith("1/1")
-
-            elif (
-                namespace == "core-app"
-                and name == "frontend-service"
-            ):
-                frontend = ready.startswith("1/1")
-
-        if controller:
+        if "1/1" in output:
             self.window.controller_card.set_running()
         else:
             self.window.controller_card.set_stopped()
 
-        if kserve:
+    # =====================================================
+    # KServe
+    # =====================================================
+
+    def check_kserve(self):
+
+        self.run(
+            "kserve_process",
+            "kubectl get deployment kserve-controller-manager -n kserve",
+            self.parse_kserve,
+        )
+
+    def parse_kserve(self, output):
+
+        if "1/1" in output or "2/2" in output:
             self.window.kserve_card.set_running()
         else:
             self.window.kserve_card.set_stopped()
 
-        if frontend:
+    # =====================================================
+    # Frontend
+    # =====================================================
+
+    def check_frontend(self):
+
+        self.run(
+            "frontend_process",
+            "kubectl get deployment frontend-service -n core-app",
+            self.parse_frontend,
+        )
+
+    def parse_frontend(self, output):
+
+        if "1/1" in output:
             self.window.frontend_card.set_running()
         else:
             self.window.frontend_card.set_stopped()
+
+    # =====================================================
+    # Shutdown
+    # =====================================================
+
+    def stop(self):
+
+        self.timer.stop()
+
+        for name in (
+            "minikube_process",
+            "controller_process",
+            "kserve_process",
+            "frontend_process",
+        ):
+
+            process = getattr(self, name)
+
+            if process is None:
+                continue
+
+            if process.state() != QProcess.NotRunning:
+
+                process.terminate()
+
+                if not process.waitForFinished(1000):
+                    process.kill()
+                    process.waitForFinished()
+
+            process.deleteLater()
+
+            setattr(self, name, None)

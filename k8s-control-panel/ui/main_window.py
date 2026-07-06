@@ -121,6 +121,7 @@ class MainWindow(QMainWindow):
 
         self.tabs.addTab(self.terminal, "Terminal")
         self.tabs.addTab(self.data, "Data")
+        self.data.start()
 
         main_layout.addWidget(scroll, 1)
         main_layout.addWidget(self.tabs, 4)
@@ -247,7 +248,7 @@ class MainWindow(QMainWindow):
                 "-c",
                 "kubectl logs -f deployment/kserve-controller-manager"
                 " -n kserve 2>&1"
-                " | sed -u 's/.*\"msg\":\"\\([^\"]*\\)\".*/[KSERVE] \\1/'"
+                " | python3 -u services/log_formatter.py"
             ]
         )
 
